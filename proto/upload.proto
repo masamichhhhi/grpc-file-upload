@@ -1,0 +1,12 @@
+syntax="proto3";
+package upload;
+option go_package="./;upload";
+
+
+service UploadService{
+  rpc Upload(stream UploadRequest) returns (UploadReply) {};
+}
+
+message UploadRequest { bytes MediaData = 1; }
+
+message UploadReply { string UploadStatus = 1; }

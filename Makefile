@@ -1,3 +1,2 @@
-gen: protoc --proto_path=proto proto/*.proto --go_out=:pb --go-grpc_out=:pb --grpc-gateway_out=:pb --openapiv2_out=:swagger
-
-.PHONY: clean gen server client test cert 
+gen: 
+	protoc --go_out=./proto --proto_path=./proto --go_opt=paths=source_relative --go-grpc_out=./proto --go-grpc_opt=paths=source_relative ./proto/upload.proto
