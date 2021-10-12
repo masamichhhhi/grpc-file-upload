@@ -7,6 +7,8 @@ service UploadService{
   rpc Upload(stream UploadRequest) returns (UploadReply) {};
 }
 
-message UploadRequest { bytes MediaData = 1; }
+message UploadRequest { 
+  bytes MediaData = 1;
+}
 
 message UploadReply { string UploadStatus = 1; }
