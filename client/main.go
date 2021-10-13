@@ -10,6 +10,7 @@ import (
 
 	upload "github.com/masamichhhhi/grpc-upload/proto"
 	"google.golang.org/grpc"
+	"gopkg.in/h2non/filetype.v1"
 )
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		err = Upload(stream, file, fileHeader.Filename)
+		err = Upload(stream, file, fileHeader)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -44,7 +45,13 @@ func main() {
 	http.ListenAndServe(":8081", nil)
 }
 
-func Upload(stream upload.UploadService_UploadClient, file multipart.File, fileName string) error {
+func Upload(stream upload.UploadService_UploadClient, file multipart.File, info *multipart.FileHeader) error {
+	h := MakeHeader(info)
+	h.Add("content-type", mime(file, info))
+	stream.Send(&upload.FileRequest{
+		File: h.Cast(),
+	})
+
 	buf := make([]byte, 1024)
 	for {
 		_, err := file.Read(buf)
@@ -55,7 +62,12 @@ func Upload(stream upload.UploadService_UploadClient, file multipart.File, fileN
 			return err
 		}
 
-		err = stream.Send(&upload.UploadRequest{MediaData: buf})
+		err = stream.Send(&upload.FileRequest{
+			File: &upload.FileRequest_Chunk{
+				Chunk: &upload.ChunkType{
+					MediaData: buf,
+				},
+			}})
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -69,4 +81,53 @@ func Upload(stream upload.UploadService_UploadClient, file multipart.File, fileN
 
 	return nil
 
+}
+
+type FileHeader upload.FileRequest_Header
+
+func (f *FileHeader) Add(key, value string) {
+	h := f.Header.Header
+	for i := 0; i < len(h); i++ {
+		if h[i].Key == key {
+			h[i].Values = append(h[i].Values, value)
+			return
+		}
+	}
+
+	h = append(h, &upload.FileHeader_MIMEHeaderType{
+		Key:    key,
+		Values: []string{value},
+	})
+}
+
+func (f *FileHeader) Cast() *upload.FileRequest_Header {
+	if f == nil {
+		return nil
+	}
+
+	h := upload.FileRequest_Header(*f)
+	return &h
+}
+
+func MakeHeader(info *multipart.FileHeader) *FileHeader {
+	log.Println(info.Filename)
+	h := FileHeader(
+		upload.FileRequest_Header{
+			Header: &upload.FileHeader{
+				Name: info.Filename,
+			},
+		},
+	)
+	return &h
+}
+
+func mime(f multipart.File, info *multipart.FileHeader) string {
+	head := make([]byte, 261)
+	f.Read(head)
+	f.Seek(0, 0)
+	kind, err := filetype.Match(head)
+	if err != nil {
+		return "unknown"
+	}
+	return kind.MIME.Value
 }

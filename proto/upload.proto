@@ -3,12 +3,28 @@ package upload;
 option go_package="./;upload";
 
 
-service UploadService{
-  rpc Upload(stream UploadRequest) returns (UploadReply) {};
+service UploadService {
+  rpc Upload(stream FileRequest) returns (UploadReply) {};
 }
 
-message UploadRequest { 
+message ChunkType { 
   bytes MediaData = 1;
+}
+
+message FileHeader {
+  string name = 1;
+  message MIMEHeaderType {
+    string key = 1;
+    repeated string values = 2;
+  }
+  repeated MIMEHeaderType header = 2;
+}
+
+message FileRequest {
+  oneof File {
+    ChunkType chunk = 1;
+    FileHeader header = 2;
+  }
 }
 
 message UploadReply { string UploadStatus = 1; }

@@ -39,7 +39,7 @@ func (c *uploadServiceClient) Upload(ctx context.Context, opts ...grpc.CallOptio
 }
 
 type UploadService_UploadClient interface {
-	Send(*UploadRequest) error
+	Send(*FileRequest) error
 	CloseAndRecv() (*UploadReply, error)
 	grpc.ClientStream
 }
@@ -48,7 +48,7 @@ type uploadServiceUploadClient struct {
 	grpc.ClientStream
 }
 
-func (x *uploadServiceUploadClient) Send(m *UploadRequest) error {
+func (x *uploadServiceUploadClient) Send(m *FileRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
@@ -95,7 +95,7 @@ func _UploadService_Upload_Handler(srv interface{}, stream grpc.ServerStream) er
 
 type UploadService_UploadServer interface {
 	SendAndClose(*UploadReply) error
-	Recv() (*UploadRequest, error)
+	Recv() (*FileRequest, error)
 	grpc.ServerStream
 }
 
@@ -107,8 +107,8 @@ func (x *uploadServiceUploadServer) SendAndClose(m *UploadReply) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *uploadServiceUploadServer) Recv() (*UploadRequest, error) {
-	m := new(UploadRequest)
+func (x *uploadServiceUploadServer) Recv() (*FileRequest, error) {
+	m := new(FileRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}

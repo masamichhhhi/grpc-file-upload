@@ -3,12 +3,13 @@ package handler
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
 	"cloud.google.com/go/storage"
 	upload "github.com/masamichhhhi/grpc-upload/proto"
+	"github.com/pkg/errors"
+
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -25,11 +26,15 @@ func NewUploadServer(gserver *grpc.Server) {
 }
 
 func (s *server) Upload(stream upload.UploadService_UploadServer) error {
-	tempfile, err := ioutil.TempFile(os.TempDir(), "sample")
-	defer tempfile.Close()
+	req, err := stream.Recv()
+
+	f, err := CreateTempFile(req)
 	if err != nil {
-		return err
+		panic(err)
 	}
+
+	defer f.Close()
+	defer os.Remove(f.Name())
 
 	for {
 		resp, err := stream.Recv()
@@ -40,7 +45,10 @@ func (s *server) Upload(stream upload.UploadService_UploadServer) error {
 			log.Println(err)
 			return err
 		}
-		tempfile.Write(resp.MediaData)
+		chunk := resp.GetChunk()
+		if _, err := f.Write(chunk.GetMediaData()); err != nil {
+			panic(err)
+		}
 	}
 
 	ctx := context.Background()
@@ -50,11 +58,15 @@ func (s *server) Upload(stream upload.UploadService_UploadServer) error {
 	}
 
 	bucketName := "grpc-test-masamichi"
-	objectPath := "sample.mp4"
+	detail, err := f.Stat()
+	if err != nil {
+		panic(err)
+	}
+	objectPath := detail.Name()
 	obj := client.Bucket(bucketName).Object(objectPath)
 	writer := obj.NewWriter(ctx)
 
-	if _, err = io.Copy(writer, tempfile); err != nil {
+	if _, err = io.Copy(writer, f); err != nil {
 		log.Println(err)
 	}
 
@@ -70,4 +82,21 @@ func (s *server) Upload(stream upload.UploadService_UploadServer) error {
 	}
 
 	return nil
+}
+
+func CreateTempFile(req *upload.FileRequest) (*os.File, error) {
+	header := req.GetHeader()
+	log.Println(header.GetName())
+	// f, err := ioutil.TempFile(os.TempDir(), header.GetName())
+	f, err := os.Create(header.GetName())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create file")
+	}
+	for _, dict := range header.GetHeader() {
+		log.Println("Key:", dict.GetKey())
+		for _, val := range dict.GetValues() {
+			log.Println("value: ", val)
+		}
+	}
+	return f, nil
 }
