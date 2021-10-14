@@ -14,4 +14,5 @@ go_package="{import_path};{package_name}"でgoのpackage名を指定する
 ## TODO
 - multpartで受け取ったファイルをアップロードして保存→ok
 - cloudrunで受け取りcloud storageに保存→ローカルではok, cloud runにデプロイしてみる
-- ファイルのメタ情報も受け取る
+- ファイルのメタ情報も受け取る→storageにあげても見れない→`io.Copy`をやめて、`ioutil.Readfile`に変えたらいけた。なんで？
+- フロントエンドからアクセスしてみる

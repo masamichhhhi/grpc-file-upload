@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -62,12 +63,19 @@ func (s *server) Upload(stream upload.UploadService_UploadServer) error {
 	if err != nil {
 		panic(err)
 	}
+
 	objectPath := detail.Name()
 	obj := client.Bucket(bucketName).Object(objectPath)
 	writer := obj.NewWriter(ctx)
+	writer.ContentType = "video/mp4"
 
-	if _, err = io.Copy(writer, f); err != nil {
-		log.Println(err)
+	buf, err := ioutil.ReadFile(detail.Name())
+	if err != nil {
+		panic(err)
+	}
+
+	if _, err := writer.Write(buf); err != nil {
+		panic(err)
 	}
 
 	if err = writer.Close(); err != nil {
